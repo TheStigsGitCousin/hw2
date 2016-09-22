@@ -45,7 +45,8 @@ public class Player {
         int player=nextStates.get(0).getNextPlayer();
         System.err.println("turn "+count +" player : "+Constants.SIMPLE_TEXT[player]);
 
-        if (count>6 && player==Constants.CELL_O){
+      //  if (count>6 && player==Constants.CELL_O){
+        if (count>6){
         	GameState best=null;
         	int bestMiniMax=-1;
 	        for (Iterator<GameState> iterator = nextStates.iterator(); iterator.hasNext();) {

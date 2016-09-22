@@ -36,10 +36,11 @@ public class MiniMax {
             return gamma(player, state);
         } else {
         	toLook+=nextStates.size();
+        	int currentPlayer = nextStates.get(0).getNextPlayer();
             int bestPossible = -1;
             int v = -1;
             //can search deeper
-            if (player == state.getNextPlayer()) {
+            if (player == currentPlayer) {
                 bestPossible = Integer.MIN_VALUE;
                 for (GameState child : nextStates) {
                     v = minimax(child,player);
