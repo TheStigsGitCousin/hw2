@@ -8,7 +8,7 @@ public class Player {
 	 * mkfifo pipe1 pipe2
 	 * javac *.java
 	 * java Main init verbose > pipe1 < pipe2
-	 * java Main verbose > pipe1 < pipe2
+	 * java Main verbose < pipe1 > pipe2
 	 */
 	
 	
@@ -45,22 +45,31 @@ public class Player {
         int player=nextStates.get(0).getNextPlayer();
         System.err.println("turn "+count +" player : "+Constants.SIMPLE_TEXT[player]);
 
-      //  if (count>6 && player==Constants.CELL_O){
-        if (count>6){
-        	GameState best=null;
-        	int bestMiniMax=-1;
-	        for (Iterator<GameState> iterator = nextStates.iterator(); iterator.hasNext();) {
-				GameState state = (GameState) iterator.next();
-				int res=miniMax.minimax(state,player);
+      //  if (count>-1 && player==Constants.CELL_O){
+        if (count>-1){
+        	int bestIdx=-1;
+        	int bestMiniMax=Integer.MIN_VALUE;
+        	int bestGamma=Integer.MIN_VALUE;
+        	for (int i = 0; i < nextStates.size(); i++) {
+        		GameState state = nextStates.get(i);
+				int res=miniMax.minimax(state,player,15,new Deadline(deadline.timeUntil()/(nextStates.size()-i)));
 				System.err.println("move : "+state.getMove().toString()+" minimax :"+res); 
 				if (res>bestMiniMax){
-					best=state;
+					bestIdx=i;
 					bestMiniMax=res;
+					bestGamma=miniMax.gamma(player, state);
+				}else if (res==bestMiniMax){
+					int gamma = miniMax.gamma(player, state);
+					if (gamma>bestGamma){
+						bestIdx=i;
+						bestGamma=gamma;
+					}
 				}
+				
 			}
-	        if (best!=null){
-	        	System.err.println("move : "+best.getMove().toString()+" chosen"); 
-	        	return best;
+	        if (bestIdx!=-1){
+	        	System.err.println("move : "+nextStates.elementAt(bestIdx).getMove().toString()+" chosen"); 
+	        	return nextStates.elementAt(bestIdx);
 	        }
         }
         
