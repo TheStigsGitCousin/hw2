@@ -14,15 +14,22 @@ public class MiniMax {
 
         //gamma is a function that returns 1, 0 or -1 depending on whether the current state is a win, tie or loss for the player
     	
-
+    	//System.err.println("deadline1: "+deadline.timeUntil());
+    	
+    	if (deadline.timeUntil()<10000 || deep==0){
+    		return gamma(player, state);
+    	}
     	
                 Vector<GameState> nextStates = new Vector<GameState>();
         state.findPossibleMoves(nextStates);
-        
+        //984375000
+       //1000000000
+
 
      //   System.err.println("minimax player "+Constants.SIMPLE_TEXT[player]+" nb next "+nextStates.size());
   //      System.err.println("looked "+looked+"    to look "+toLook); 
-        if (deadline.timeUntil()<deep*10000000 || deep==0 || nextStates.size()==0) {
+       // System.err.println("deadline2: "+deadline.timeUntil());
+        if (deadline.timeUntil()<500 || deep==0 || nextStates.size()==0) {
             //terminal state
 
         	//System.err.println(state.toString(state.getNextPlayer()));
@@ -32,11 +39,12 @@ public class MiniMax {
         	int currentPlayer = nextStates.get(0).getNextPlayer();
             int bestPossible = -1;
             int v = -1;
+            long time=deadline.timeUntil()/nextStates.size()-100;
             //can search deeper
             if (player == currentPlayer) {
                 bestPossible = Integer.MIN_VALUE;
                 for (GameState child : nextStates) {
-                    v = minimax(child,player,deep-1,deadline);
+                    v = minimax(child,player,deep-1,new Deadline(Deadline.getCpuTime() +time));
                     bestPossible = Math.max(bestPossible, v);
                 }
                 return bestPossible;
@@ -44,7 +52,7 @@ public class MiniMax {
                 //player = B
                 bestPossible = Integer.MAX_VALUE;
                 for (GameState child : nextStates) {
-                    v = minimax(child,player,deep-1,deadline);
+                    v = minimax(child,player,deep-1,new Deadline(Deadline.getCpuTime() +time));
                     bestPossible = Math.min(bestPossible, v);
                 }
                 return bestPossible;
@@ -99,7 +107,7 @@ public class MiniMax {
 					nb++;
 				}else if (c!=Constants.CELL_EMPTY){
 					nb=0;
-					break;
+					return nbAlign;
 				}
 			}
 		}

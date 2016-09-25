@@ -52,7 +52,8 @@ public class Player {
         	int bestGamma=Integer.MIN_VALUE;
         	for (int i = 0; i < nextStates.size(); i++) {
         		GameState state = nextStates.get(i);
-				int res=miniMax.minimax(state,player,15,new Deadline(deadline.timeUntil()/(nextStates.size()-i)));
+        		System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 100000000)/(nextStates.size()-i)));
+				int res=miniMax.minimax(state,player,15,new Deadline( Deadline.getCpuTime() + (deadline.timeUntil()- 600000000)/(nextStates.size()-i)));
 				System.err.println("move : "+state.getMove().toString()+" minimax :"+res); 
 				if (res>bestMiniMax){
 					bestIdx=i;
