@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,15 +14,16 @@ import java.util.Vector;
  */
 public class MiniMax {
 	
-	public static final int SCOREWIN = 500;
+	public static final int SCOREWIN = 1000;
 	
-	public static int minDepth =100;
+	public int minDepth =100;
 	
 	 public int minimax(final GameState state, int player, int depth, Deadline deadline) {
-		 return minimax(state, player, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, deadline);
+		 minDepth=101;
+		 return minimax(state, player, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, deadline, "");
 	 }
 
-    public int minimax(final GameState state, int player, int depth, int alpha, int beta, Deadline deadline) {
+    public int minimax(final GameState state, int player, int depth, int alpha, int beta, Deadline deadline, String debug) {
         //state: the current state we are analyzing
         //player: the current player (A = 1, B = 2)
         //returns a heuristic value that approximates a utility function of the state
@@ -30,11 +32,15 @@ public class MiniMax {
     	
     	minDepth=Math.min(minDepth, depth);
     	
-    	//System.err.println("deadline1: "+deadline.timeUntil());
+    //	System.err.println("deadline1: "+deadline.timeUntil());
     //	System.err.println("depth : "+depth+" move"+state.getMove().toMessage());
     	if (deadline.timeUntil()<800_000 || depth==0){
-    		
-    		return gamma(player, state);
+    	//	System.err.println("timeout");
+    		int g=gamma(player, state);
+    		if (g<SCOREWIN && g>-SCOREWIN){
+    			g-=(int)(-depth%2+2)/(0.4*(100-depth)+0.04);
+    		}
+    		return g;
     	}
     	
                 Vector<GameState> nextStates = new Vector<GameState>();
@@ -50,21 +56,43 @@ public class MiniMax {
         	//System.err.println("terminal depth : "+depth);
         	//System.err.println(state.toString(state.getNextPlayer()));
         	//System.err.println("gamma "+gamma(player, state));
-            return gamma(player, state);
+        	int g=gamma(player, state);
+    		return g;
         } else {
+        	debug+=" "+state.getMove();
+        	if (depth<91){
+        		System.err.println(debug);
+        	}
         	int currentPlayer = nextStates.get(0).getNextPlayer();
             int bestPossible = -1;
             int v = -1;
-            long totalTime=(long) (deadline.timeUntil()*0.8);
+            long totalTime=(long) (deadline.timeUntil()*1);
+        	Deadline totalDeadline = new Deadline(totalTime);
+        	double sumPriority=0;
             //can search deeper
             if (player == currentPlayer) {
             	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,true,player);
+            	if (mapPriority.size()==1 && nextStates.size()!=1){
+            		//System.err.println("stop "+mapPriority.entrySet().iterator().next().getValue().intValue());
+            		return  mapPriority.entrySet().iterator().next().getValue().intValue();
+            	}
                 bestPossible = Integer.MIN_VALUE;
-                for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
-            		GameState child = nextStates.get(priority.getKey());
-            		long time=(long) (Deadline.getCpuTime() +totalTime*priority.getValue());
-                    v = minimax(child,player,depth-1,alpha,beta,new Deadline(time));
+                
+                List<Integer> reverseOrderedKeys = new ArrayList<Integer>(mapPriority.keySet());
+            	Collections.reverse(reverseOrderedKeys);
+            	for (int key : reverseOrderedKeys) {
+            		Double priority = mapPriority.get(key);
+            		GameState child = nextStates.get(key);
+          //      for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
+          //  		GameState child = nextStates.get(priority.getKey());
+            		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
+            		sumPriority+=priority;
+            //		long time=(long) (Deadline.getCpuTime() +totalTime*priority.getValue());
+                    v = minimax(child,player,depth-1,alpha,beta,new Deadline(time),debug);
                     bestPossible = Math.max(bestPossible, v);
+                 /*   if (depth<100){
+                    	System.err.println(child.getMove()+"  "+v);
+                    }*/
                     alpha=Math.max(alpha, v);
                     if (bestPossible>=SCOREWIN)
                     	break;
@@ -74,13 +102,30 @@ public class MiniMax {
                 return bestPossible;
             } else {
                 //player = B
-            	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,false,player);
+            	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,false,player,false);
+            	if (mapPriority.size()==1 && nextStates.size()!=1){
+            		//System.err.println("stop "+mapPriority.entrySet().iterator().next().getValue().intValue());
+            		return  mapPriority.entrySet().iterator().next().getValue().intValue();
+            	}
+            
                 bestPossible = Integer.MAX_VALUE;
-                for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
-            		GameState child = nextStates.get(priority.getKey());
-                	long time=(long) (Deadline.getCpuTime() +totalTime*priority.getValue());
-                    v = minimax(child,player,depth-1,alpha,beta,new Deadline(time));
+                
+                List<Integer> reverseOrderedKeys = new ArrayList<Integer>(mapPriority.keySet());
+            	Collections.reverse(reverseOrderedKeys);
+            	for (int key : reverseOrderedKeys) {
+            		Double priority = mapPriority.get(key);
+            		GameState child = nextStates.get(key);
+            		
+              //  for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
+            //		GameState child = nextStates.get(priority.getKey());
+            		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
+            		sumPriority+=priority;
+            //    	long time=(long) (Deadline.getCpuTime() +totalTime*priority);
+                    v = minimax(child,player,depth-1,alpha,beta,new Deadline(time),debug);
                     bestPossible = Math.min(bestPossible, v);
+                 /*   if (depth<100){
+                    	System.err.println(child.getMove()+"  "+v);
+                    }*/
               /*      if (bestPossible==-SCOREWIN_000){
                     	System.err.println("bestpos "+state.getMove());
                     }*/
@@ -113,28 +158,34 @@ public class MiniMax {
 
     
 	private int pointFromAlign(int[][] align,int player,int nextPlayer) {
-	/*	int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
+		int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
 		int res=0;
 		if (player!=nextPlayer){
 			if (align[player-1][1]!=0){
-				return SCOREWIN_000;
+				return align[player-1][1]*SCOREWIN;
+			}
+			if (align[otherPlayer-1][1]>1){
+				return (int) (-SCOREWIN*0.8);
 			}
 			res+=-50*align[otherPlayer-1][1];
 		}else{
 			if (align[otherPlayer-1][1]!=0){
-				return -SCOREWIN_000;
+				return -align[otherPlayer-1][1]*SCOREWIN;
+			}
+			if (align[otherPlayer-1][1]>1){
+				return (int) (SCOREWIN*0.8);
 			}
 			res+=50*align[player-1][1];
 		}
-		res=4*align[player-1][0]-align[otherPlayer-1][0];*/
+		res+=5*align[player-1][0]-5*align[otherPlayer-1][0];
 		
-		int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
+		/*int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
         int res=4*align[player-1][0]-align[otherPlayer-1][0];
         if (player!=nextPlayer){
             res+=1000*align[player-1][1]-50*align[otherPlayer-1][1];
         }else{
             res+=50*align[player-1][1]-1000*align[otherPlayer-1][1];
-        }
+        }*/
 		return res;
 	}
 
@@ -211,33 +262,76 @@ public class MiniMax {
         }
     }
 	
-	
-	
 	public Map<Integer,Double> prioritizeStates(Vector<GameState> nextStates,boolean maxFirst,int player){
+		return prioritizeStates(nextStates,maxFirst, player, false);
+	}
+	
+	public Map<Integer,Double> prioritizeStates(Vector<GameState> nextStates,boolean maxFirst,int player, boolean debug){
+		if (debug){
+			System.err.println("DEBUG TRUE !!!");
+		}
 		Map<Integer, Integer> unsortMap = new HashMap<Integer, Integer>();
 		int sum=0;
 		int min=Integer.MAX_VALUE;
+		int max=Integer.MIN_VALUE;
+		int idMax=-1;
+		int idMin=-1;
 		for (int i = 0; i < nextStates.size(); i++) {
 			int g=gamma(player, nextStates.get(i));
-			//System.err.println("move : " + nextStates.get(i).getMove() + " gamma : " + g);
+			if (debug)
+				System.err.println("move : " + nextStates.get(i).getMove() + " gamma : " + g);
 			unsortMap.put(i, g);
-			min=Math.min(min, g);
+			if (g<min){
+				min=g;
+				idMin=i;
+			}
+			if (g>max){
+				max=g;
+				idMax=i;
+			}
 			sum+=g;
 		}
-		//printMap(unsortMap);
+	/*	if (debug)
+			printMap(unsortMap);*/
+		if (maxFirst && max>= SCOREWIN || min>= SCOREWIN){
+			Map<Integer, Double> map = new HashMap<Integer, Double>();
+			map.put(idMax, (double) SCOREWIN);
+			return map;
+		}
+		if (!maxFirst && min<= -SCOREWIN || max<=-SCOREWIN){
+			Map<Integer, Double> map = new HashMap<Integer, Double>();
+			map.put(idMax, (double) -SCOREWIN);
+			return map;
+		}
+		
 		
 		Map<Integer, Double> sortedMap = sortByValue(unsortMap,maxFirst);
+		
+		
 	//	printMap(sortedMap);
 	//	System.err.println("sum "+sum+"  min "+min);
 		//normalize priority between 0 and 1
-		sum-=min*nextStates.size();
-		if (sum==0){
-			sum=nextStates.size();
-			min=-1;
-		}
-	//	System.err.println("new sum "+sum);
-		for (int i = 0; i < nextStates.size(); i++) {
-			sortedMap.put(i, (unsortMap.get(i)-min)/(double)sum);
+		if (maxFirst){
+			sum-=min*nextStates.size();
+			if (sum==0){
+				sum=nextStates.size();
+				min=-1;
+			}
+		//	System.err.println("new sum "+sum);
+			for (int i = 0; i < nextStates.size(); i++) {
+				sortedMap.put(i, (unsortMap.get(i)-min)/(double)sum);
+			}
+		}else{
+			sum-=max*nextStates.size();
+			sum=-sum;
+			if (sum==0){
+				sum=nextStates.size();
+				max=-1;
+			}
+		//	System.err.println("new sum "+sum);
+			for (int i = 0; i < nextStates.size(); i++) {
+				sortedMap.put(i, (-(unsortMap.get(i)-max))/(double)sum);
+			}
 		}
 		return sortedMap;
 	}

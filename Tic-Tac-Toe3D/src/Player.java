@@ -10,6 +10,7 @@ public class Player {
 	 * javac *.java
 	 * java Main init verbose > pipe1 < pipe2
 	 * java Main verbose < pipe1 > pipe2
+	 * java Main init verbose < pipe | java Main > pipe
 	 */
 	
     /**
@@ -63,25 +64,61 @@ public class Player {
     //    if (count>-1 && player==Constants.CELL_O){
         if (count>-1){
         	
-        	Map<Integer, Double> mapPriority = miniMax.prioritizeStates(nextStates,true,player);
+        	Map<Integer, Double> mapPriority = miniMax.prioritizeStates(nextStates,true,player,false);
             //  MiniMax.printMap(mapPriority);
         	int bestIdx=-1;
         	int bestMiniMax=Integer.MIN_VALUE;
         	int bestGamma=Integer.MIN_VALUE;
-        	long totalTime=(long) (deadline.timeUntil()*1000);
-        	for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
+        	long totalTime=(long) (deadline.timeUntil()*5);
+        	Deadline totalDeadline = new Deadline(totalTime);
+        	double sumPriority=0;
+        	
+        	List<Integer> reverseOrderedKeys = new ArrayList<Integer>(mapPriority.keySet());
+        	Collections.reverse(reverseOrderedKeys);
+        	for (int key : reverseOrderedKeys) {
+        		Double priority = mapPriority.get(key);
+        		GameState state = nextStates.get(key);
+        		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
+        	//	long time=(long) (Deadline.getCpuTime() + totalTime*priority.getValue());
+        		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
+        		sumPriority+=priority;
+				int res=miniMax.minimax(state,player,100,new Deadline(time));
+				System.err.println("move : "+state.getMove().toString()+" minimax :"+res+" depth : "+miniMax.minDepth); 
+				if (res>bestMiniMax){
+					bestIdx=key;
+					bestMiniMax=res;
+					bestGamma=miniMax.gamma(player, state);
+					if (res>=MiniMax.SCOREWIN){
+						System.err.println("break");
+                    	break;
+					}
+				}else if (res==bestMiniMax){
+					int gamma = miniMax.gamma(player, state);
+					if (gamma>bestGamma){
+						bestIdx=key;
+						bestGamma=gamma;
+					}
+				}
+        	}
+        	
+        	
+        	
+      /*  	for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
         		GameState state = nextStates.get(priority.getKey());
         		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
-        		long time=(long) (Deadline.getCpuTime() + (totalTime- 1)*priority.getValue());
-
+        	//	long time=(long) (Deadline.getCpuTime() + totalTime*priority.getValue());
+        		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority.getValue()/(1-sumPriority));
+        		sumPriority+=priority.getValue();
 				int res=miniMax.minimax(state,player,100,new Deadline(time));
-				System.err.println("move : "+state.getMove().toString()+" minimax :"+res); 
+				System.err.println("move : "+state.getMove().toString()+" minimax :"+res+" depth : "+miniMax.minDepth); 
 				if (res>bestMiniMax){
 					bestIdx=priority.getKey();
 					bestMiniMax=res;
 					bestGamma=miniMax.gamma(player, state);
-					if (res>=MiniMax.SCOREWIN)
+					if (res>=MiniMax.SCOREWIN){
+						System.err.println("break");
                     	break;
+					}
 				}else if (res==bestMiniMax){
 					int gamma = miniMax.gamma(player, state);
 					if (gamma>bestGamma){
@@ -89,7 +126,7 @@ public class Player {
 						bestGamma=gamma;
 					}
 				}
-            }
+            }*/
         /*	for (int i = 0; i < nextStates.size(); i++) {
         		GameState state = nextStates.get(i);
         		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
@@ -109,7 +146,7 @@ public class Player {
 				
 			}*/
 	        if (bestIdx!=-1){
-	        	System.err.println("min depth : "+MiniMax.minDepth);
+	        	System.err.println("min depth : "+miniMax.minDepth);
 	        	System.err.println("move : "+nextStates.elementAt(bestIdx).getMove().toString()+" chosen"); 
 	        	return nextStates.elementAt(bestIdx);
 	        }
