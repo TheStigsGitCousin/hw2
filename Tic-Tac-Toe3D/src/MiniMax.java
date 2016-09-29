@@ -18,12 +18,12 @@ public class MiniMax {
 	
 	public int minDepth =100;
 	
-	 public int minimax(final GameState state, int player, int depth, Deadline deadline) {
+	 public int minimax(final GameState state, int player, int depth, Deadline deadline) {  //called from Player
 		 minDepth=101;
 		 return minimax(state, player, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, deadline, "");
 	 }
 
-    public int minimax(final GameState state, int player, int depth, int alpha, int beta, Deadline deadline, String debug) {
+    public int minimax(final GameState state, int player, int depth, int alpha, int beta, Deadline deadline, String debug) {  //called in the Loop
         //state: the current state we are analyzing
         //player: the current player (A = 1, B = 2)
         //returns a heuristic value that approximates a utility function of the state
@@ -32,13 +32,11 @@ public class MiniMax {
     	
     	minDepth=Math.min(minDepth, depth);
     	
-    //	System.err.println("deadline1: "+deadline.timeUntil());
-    //	System.err.println("depth : "+depth+" move"+state.getMove().toMessage());
+
     	if (deadline.timeUntil()<800_000 || depth==0){
-    	//	System.err.println("timeout");
     		int g=gamma(player, state);
     		if (g<SCOREWIN && g>-SCOREWIN){
-    			g-=(int)(-depth%2+2)/(0.4*(100-depth)+0.04);
+    			g-=(int)(-depth%2+2)/(0.005*(100-depth)+0.04)+50*(-depth%2+1);
     		}
     		return g;
     	}
@@ -46,34 +44,27 @@ public class MiniMax {
                 Vector<GameState> nextStates = new Vector<GameState>();
         state.findPossibleMoves(nextStates);
 
-        
-
-     //   System.err.println("minimax player "+Constants.SIMPLE_TEXT[player]+" nb next "+nextStates.size());
-  //      System.err.println("looked "+looked+"    to look "+toLook); 
-       // System.err.println("deadline2: "+deadline.timeUntil());
+       
         if (nextStates.size()==0) {
-            //terminal state
-        	//System.err.println("terminal depth : "+depth);
-        	//System.err.println(state.toString(state.getNextPlayer()));
-        	//System.err.println("gamma "+gamma(player, state));
         	int g=gamma(player, state);
     		return g;
         } else {
+        	
         	debug+=" "+state.getMove();
-        	if (depth<91){
+        /*	if (depth<30){
         		System.err.println(debug);
-        	}
+        	}*/
+        	
         	int currentPlayer = nextStates.get(0).getNextPlayer();
             int bestPossible = -1;
             int v = -1;
-            long totalTime=(long) (deadline.timeUntil()*1);
+            long totalTime=(long) (deadline.timeUntil()*1.0);
         	Deadline totalDeadline = new Deadline(totalTime);
         	double sumPriority=0;
             //can search deeper
             if (player == currentPlayer) {
             	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,true,player);
             	if (mapPriority.size()==1 && nextStates.size()!=1){
-            		//System.err.println("stop "+mapPriority.entrySet().iterator().next().getValue().intValue());
             		return  mapPriority.entrySet().iterator().next().getValue().intValue();
             	}
                 bestPossible = Integer.MIN_VALUE;
@@ -83,16 +74,13 @@ public class MiniMax {
             	for (int key : reverseOrderedKeys) {
             		Double priority = mapPriority.get(key);
             		GameState child = nextStates.get(key);
-          //      for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
-          //  		GameState child = nextStates.get(priority.getKey());
+
             		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
             		sumPriority+=priority;
-            //		long time=(long) (Deadline.getCpuTime() +totalTime*priority.getValue());
+
                     v = minimax(child,player,depth-1,alpha,beta,new Deadline(time),debug);
                     bestPossible = Math.max(bestPossible, v);
-                 /*   if (depth<100){
-                    	System.err.println(child.getMove()+"  "+v);
-                    }*/
+
                     alpha=Math.max(alpha, v);
                     if (bestPossible>=SCOREWIN)
                     	break;
@@ -102,9 +90,8 @@ public class MiniMax {
                 return bestPossible;
             } else {
                 //player = B
-            	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,false,player,false);
+            	Map<Integer, Double> mapPriority = prioritizeStates(nextStates,false,player);
             	if (mapPriority.size()==1 && nextStates.size()!=1){
-            		//System.err.println("stop "+mapPriority.entrySet().iterator().next().getValue().intValue());
             		return  mapPriority.entrySet().iterator().next().getValue().intValue();
             	}
             
@@ -115,20 +102,13 @@ public class MiniMax {
             	for (int key : reverseOrderedKeys) {
             		Double priority = mapPriority.get(key);
             		GameState child = nextStates.get(key);
-            		
-              //  for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
-            //		GameState child = nextStates.get(priority.getKey());
+
             		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
             		sumPriority+=priority;
-            //    	long time=(long) (Deadline.getCpuTime() +totalTime*priority);
+            		
                     v = minimax(child,player,depth-1,alpha,beta,new Deadline(time),debug);
                     bestPossible = Math.min(bestPossible, v);
-                 /*   if (depth<100){
-                    	System.err.println(child.getMove()+"  "+v);
-                    }*/
-              /*      if (bestPossible==-SCOREWIN_000){
-                    	System.err.println("bestpos "+state.getMove());
-                    }*/
+
                     beta=Math.min(beta, v);
                     if (bestPossible<=-SCOREWIN)
                     	break;
@@ -142,17 +122,15 @@ public class MiniMax {
     
     public int gamma(int player, GameState state) {
         if ((player == Constants.CELL_X && state.isXWin()) || (player == Constants.CELL_O && state.isOWin())){
-    //    	System.err.println("1000000 "+state.getMove());
             return SCOREWIN;
         }
         if ((player == Constants.CELL_X && state.isOWin()) || (player == Constants.CELL_O && state.isXWin())){
-    //    	System.err.println("-1000000 "+state.getMove());
             return -SCOREWIN;
         }
         if (state.isEOG())
             return 0;
         int[][] align=getNbAlign(state);
-        //System.err.println("nbAlign :"+Arrays.deepToString(align));
+
         return pointFromAlign(align,player,state.getNextPlayer());  
     }
 
@@ -160,32 +138,25 @@ public class MiniMax {
 	private int pointFromAlign(int[][] align,int player,int nextPlayer) {
 		int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
 		int res=0;
-		if (player!=nextPlayer){
-			if (align[player-1][1]!=0){
-				return align[player-1][1]*SCOREWIN;
+		if (player!=nextPlayer){  // You are the next player
+			if (align[player-1][1]!=0){  // You have at least once 3 aligned
+				return align[player-1][1]*SCOREWIN; //you win
 			}
-			if (align[otherPlayer-1][1]>1){
-				return (int) (-SCOREWIN*0.8);
+			if (align[otherPlayer-1][1]>1){  // the other player have more than 1 time 3 aligned
+				return (int) (-SCOREWIN*0.8); //you loose
 			}
-			res+=-50*align[otherPlayer-1][1];
-		}else{
-			if (align[otherPlayer-1][1]!=0){
-				return -align[otherPlayer-1][1]*SCOREWIN;
+			res+=-50*align[otherPlayer-1][1]; 
+		}else{       								//You are not the next player
+			if (align[otherPlayer-1][1]!=0){		//the other player have at least once 3 aligned
+				return -align[otherPlayer-1][1]*SCOREWIN;  // you loose
 			}
-			if (align[otherPlayer-1][1]>1){
-				return (int) (SCOREWIN*0.8);
+			if (align[otherPlayer-1][1]>1){   		//you have more than 1 time 3 aligned
+				return (int) (SCOREWIN*0.8);		//you win
 			}
 			res+=50*align[player-1][1];
 		}
 		res+=5*align[player-1][0]-5*align[otherPlayer-1][0];
 		
-		/*int otherPlayer= player ^ (Constants.CELL_X | Constants.CELL_O);
-        int res=4*align[player-1][0]-align[otherPlayer-1][0];
-        if (player!=nextPlayer){
-            res+=1000*align[player-1][1]-50*align[otherPlayer-1][1];
-        }else{
-            res+=50*align[player-1][1]-1000*align[otherPlayer-1][1];
-        }*/
 		return res;
 	}
 
@@ -209,7 +180,7 @@ public class MiniMax {
 		nbAlign = checkLigne(state,nbAlign,0,GameState.BOARD_SIZE-1,0,1,-1,1);
 		nbAlign = checkLigne(state,nbAlign,0,0,GameState.BOARD_SIZE-1,1,1,-1);
 	
-	//	System.err.println("nbAlign :"+Arrays.deepToString(nbAlign));
+
 		return nbAlign;
 	}
 	
@@ -236,15 +207,11 @@ public class MiniMax {
 				if (s==p){
 					nb++;
 				}else if (s!=Constants.CELL_EMPTY){
-					nb=0;
 					return nbAlign;
 				}
 			}
 		}
 		if (nb>1){
-		/*	if (state.getMove().equals(new Move(52, 2))){
-				System.err.println("at "+initRow+","+incrRow+"/"+initCol+","+incrCol+"/"+initLay+","+incrLay+" -> "+nb );
-			}*/
 			nbAlign[p-1][nb-2]++;
 		}
 		return nbAlign;
@@ -262,15 +229,11 @@ public class MiniMax {
         }
     }
 	
-	public Map<Integer,Double> prioritizeStates(Vector<GameState> nextStates,boolean maxFirst,int player){
-		return prioritizeStates(nextStates,maxFirst, player, false);
-	}
 	
-	public Map<Integer,Double> prioritizeStates(Vector<GameState> nextStates,boolean maxFirst,int player, boolean debug){
-		if (debug){
-			System.err.println("DEBUG TRUE !!!");
-		}
+	public Map<Integer,Double> prioritizeStates(Vector<GameState> nextStates,boolean maxFirst,int player){
+
 		Map<Integer, Integer> unsortMap = new HashMap<Integer, Integer>();
+		
 		int sum=0;
 		int min=Integer.MAX_VALUE;
 		int max=Integer.MIN_VALUE;
@@ -278,8 +241,6 @@ public class MiniMax {
 		int idMin=-1;
 		for (int i = 0; i < nextStates.size(); i++) {
 			int g=gamma(player, nextStates.get(i));
-			if (debug)
-				System.err.println("move : " + nextStates.get(i).getMove() + " gamma : " + g);
 			unsortMap.put(i, g);
 			if (g<min){
 				min=g;
@@ -291,8 +252,7 @@ public class MiniMax {
 			}
 			sum+=g;
 		}
-	/*	if (debug)
-			printMap(unsortMap);*/
+
 		if (maxFirst && max>= SCOREWIN || min>= SCOREWIN){
 			Map<Integer, Double> map = new HashMap<Integer, Double>();
 			map.put(idMax, (double) SCOREWIN);
@@ -308,9 +268,6 @@ public class MiniMax {
 		Map<Integer, Double> sortedMap = sortByValue(unsortMap,maxFirst);
 		
 		
-	//	printMap(sortedMap);
-	//	System.err.println("sum "+sum+"  min "+min);
-		//normalize priority between 0 and 1
 		if (maxFirst){
 			sum-=min*nextStates.size();
 			if (sum==0){
@@ -319,7 +276,7 @@ public class MiniMax {
 			}
 		//	System.err.println("new sum "+sum);
 			for (int i = 0; i < nextStates.size(); i++) {
-				sortedMap.put(i, (unsortMap.get(i)-min)/(double)sum);
+				sortedMap.put(i, 0.25/nextStates.size()+0.75*(unsortMap.get(i)-min)/(double)sum);
 			}
 		}else{
 			sum-=max*nextStates.size();
@@ -330,7 +287,7 @@ public class MiniMax {
 			}
 		//	System.err.println("new sum "+sum);
 			for (int i = 0; i < nextStates.size(); i++) {
-				sortedMap.put(i, (-(unsortMap.get(i)-max))/(double)sum);
+				sortedMap.put(i, 0.25/nextStates.size()+0.75*(-(unsortMap.get(i)-max))/(double)sum);
 			}
 		}
 		return sortedMap;

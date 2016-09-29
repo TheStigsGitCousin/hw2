@@ -46,25 +46,13 @@ public class Player {
         System.err.println("turn "+count +" player : "+Constants.SIMPLE_TEXT[player]);
 
         
-       /* 	long t = deadline.timeUntil();
-        	for (int i = 0; i < 100; i++) {
-				gameState.findPossibleMoves( new Vector<GameState>());
-			}
-        	System.err.println("find moves : "+(t-deadline.timeUntil())); 
-        	long t2 = deadline.timeUntil();
-        	for (int i = 0; i < 1000; i++) {
-        		miniMax.gamma(player, gameState);
-			}
-        	System.err.println("heuristique : "+(t2-deadline.timeUntil()));*/ 
-        	
+
         	
 
 
-
-    //    if (count>-1 && player==Constants.CELL_O){
-        if (count>-1){
         	
-        	Map<Integer, Double> mapPriority = miniMax.prioritizeStates(nextStates,true,player,false);
+        	Map<Integer, Double> mapPriority = miniMax.prioritizeStates(nextStates,true,player);
+        	
             //  MiniMax.printMap(mapPriority);
         	int bestIdx=-1;
         	int bestMiniMax=Integer.MIN_VALUE;
@@ -78,8 +66,7 @@ public class Player {
         	for (int key : reverseOrderedKeys) {
         		Double priority = mapPriority.get(key);
         		GameState state = nextStates.get(key);
-        		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
-        	//	long time=(long) (Deadline.getCpuTime() + totalTime*priority.getValue());
+
         		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority/(1-sumPriority));
         		sumPriority+=priority;
 				int res=miniMax.minimax(state,player,100,new Deadline(time));
@@ -89,7 +76,6 @@ public class Player {
 					bestMiniMax=res;
 					bestGamma=miniMax.gamma(player, state);
 					if (res>=MiniMax.SCOREWIN){
-						System.err.println("break");
                     	break;
 					}
 				}else if (res==bestMiniMax){
@@ -103,54 +89,13 @@ public class Player {
         	
         	
         	
-      /*  	for (Map.Entry<Integer,Double> priority : mapPriority.entrySet()) {
-        		GameState state = nextStates.get(priority.getKey());
-        		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
-        	//	long time=(long) (Deadline.getCpuTime() + totalTime*priority.getValue());
-        		long time=(long) (Deadline.getCpuTime() + totalDeadline.timeUntil()*priority.getValue()/(1-sumPriority));
-        		sumPriority+=priority.getValue();
-				int res=miniMax.minimax(state,player,100,new Deadline(time));
-				System.err.println("move : "+state.getMove().toString()+" minimax :"+res+" depth : "+miniMax.minDepth); 
-				if (res>bestMiniMax){
-					bestIdx=priority.getKey();
-					bestMiniMax=res;
-					bestGamma=miniMax.gamma(player, state);
-					if (res>=MiniMax.SCOREWIN){
-						System.err.println("break");
-                    	break;
-					}
-				}else if (res==bestMiniMax){
-					int gamma = miniMax.gamma(player, state);
-					if (gamma>bestGamma){
-						bestIdx=priority.getKey();
-						bestGamma=gamma;
-					}
-				}
-            }*/
-        /*	for (int i = 0; i < nextStates.size(); i++) {
-        		GameState state = nextStates.get(i);
-        		//System.err.println("start deadline: "+deadline.timeUntil()+" nb "+(nextStates.size()-i)+" res "+((deadline.timeUntil()- 400000000)/(nextStates.size()-i)));
-				int res=miniMax.minimax(state,player,100,new Deadline( Deadline.getCpuTime() + (deadline.timeUntil()- 100000000)/(nextStates.size()-i)));
-				System.err.println("move : "+state.getMove().toString()+" minimax :"+res); 
-				if (res>bestMiniMax){
-					bestIdx=i;
-					bestMiniMax=res;
-					bestGamma=miniMax.gamma(player, state);
-				}else if (res==bestMiniMax){
-					int gamma = miniMax.gamma(player, state);
-					if (gamma>bestGamma){
-						bestIdx=i;
-						bestGamma=gamma;
-					}
-				}
-				
-			}*/
+      
 	        if (bestIdx!=-1){
 	        	System.err.println("min depth : "+miniMax.minDepth);
 	        	System.err.println("move : "+nextStates.elementAt(bestIdx).getMove().toString()+" chosen"); 
 	        	return nextStates.elementAt(bestIdx);
 	        }
-        }
+        
         
         
         Random random = new Random();
